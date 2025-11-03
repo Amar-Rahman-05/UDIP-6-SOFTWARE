@@ -1,2 +1,2 @@
 # UDIP-6-SOFTWARE
-UDIP- Flight and Ground software
+UDIP-6 Mission's Flight Software and its Documentation, our Ground Software and its Documentation  
