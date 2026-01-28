@@ -64,7 +64,7 @@ class sensorPacket(Packet):
 
     def readPyld(self):
         self.accel_M = unpack('<hhh', self.pyld[0:6])      
-        self.accel_H = unpack('<hhh', self.pyld[6:12])     
+        self.accel_H = unpack('<hhh', self.pyld[6:12])    #CHECK FORMAT OF ACCEL_HIGH RANGE, IS IT [X,Y,Z] or just an int?
         self.gyro_M  = unpack('<hhh', self.pyld[12:18])   
         self.mag_M   = unpack('<hhh', self.pyld[18:24])    
         self.temp    = unpack('<h', self.pyld[24:26])[0]  
@@ -81,10 +81,10 @@ class sweepPacket(Packet):
         self.readPyld()
 
     def readPyld(self):
-        self.v_A = unpack('<h',self.pyld[0:6])[0] #CHANGE THE BYTES, NOT FINAL
-        self.v_B = unpack("<h", self.pyld[6:8])[0] #CHANGE THE BYTES
-        self.i_A = unpack('<h', self.pyld[8:14])[0] #CHANGE THE BYTES
-        self.i_B = unpack('<h', self.pyld[14:20])[0] #CHANGE THE BYTES
+        self.v_A = unpack('<h',self.pyld[0:2])[0] 
+        self.v_B = unpack("<h", self.pyld[2:4])[0] 
+        self.i_A = unpack('<h', self.pyld[4:6])[0]
+        self.i_B = unpack('<h', self.pyld[8:10])[0] 
 
 
 def readFile(fileName):
