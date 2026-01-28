@@ -1,21 +1,22 @@
 #UDIP-6 GROUND CONVERSION
 
-from numpy import tile
-import numpy as np
 
 from struct import unpack
-from scipy import interpolate
-
-import math
-import os
-import matplotlib.pyplot as plt
 
 import csv
+
 from datetime import datetime
 
 typeSens = 0x01
 typeSweep  = 0x10
-fileName = "data.bin"
+
+NUM_STEPS = 356
+
+lenHedr = 15
+
+lenSens = 24
+lenMed = NUM_STEPS * 8 + 4
+fileName = "data.dat"
 
 timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 sensor_csv = f"sensor_packets_{timestamp}.csv"
@@ -62,12 +63,12 @@ class sensorPacket(Packet):
         self.readPyld()
 
     def readPyld(self):
-        self.accel_M = unpack('<hhh',self.pyld[0:6])
-        self.accel_H = unpack("<hhh", self.pyld[6:8])
-        self.gyro_M = unpack('<hhh', self.pyld[8:14])
-        self.mag_M = unpack('<hhh', self.pyld[14:20])
-        self.temp = unpack('<Hh', self.pyld[20:24])[0]
-        self.photo = unpack('<Hh', self.pyld[24:28])[0] #CHANGE THE BYTES
+        self.accel_M = unpack('<hhh', self.pyld[0:6])      
+        self.accel_H = unpack('<hhh', self.pyld[6:12])     
+        self.gyro_M  = unpack('<hhh', self.pyld[12:18])   
+        self.mag_M   = unpack('<hhh', self.pyld[18:24])    
+        self.temp    = unpack('<h', self.pyld[24:26])[0]  
+        self.photo  = unpack('<h', self.pyld[26:28])[0]  
        
     
 class sweepPacket(Packet):
@@ -93,7 +94,7 @@ def readFile(fileName):
     loc = 0
     lenHedr = 15
     while(loc < len(raw)):
-        sync     = unpack('<BB',raw[loc + 0:loc + 2])[0]
+        sync = unpack('<BB', raw[loc:loc+2])
         count    = unpack('<H', raw[loc + 2:loc + 4])[0]
         tInitial = unpack('<I', raw[loc + 4:loc + 8])[0]
         tFinal   = unpack('<I', raw[loc + 8:loc + 12])[0]
@@ -118,6 +119,19 @@ def readFile(fileName):
 
     return myPackets
 
+def verifyHeader(sync, pcktType, pyldLen):
+    if(sync[0] != 0x55 or sync[1] != 0x44):
+        return False
+    if(pcktType == typeSens):
+        if(pyldLen != lenSens):
+            return False
+        else:
+            return True
+    if(pcktType == typeSweep):
+        if(pyldLen != lenMed):
+            return False
+        else:
+            return True
 
 
 packetList = readFile(fileName)
