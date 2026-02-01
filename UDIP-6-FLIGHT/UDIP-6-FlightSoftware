@@ -2,6 +2,14 @@
   University of Delaware Ionosphere Probe
   Department of Physics and Astronomy
   Team 2025-2026
+
+  --------------------------------------------------
+  Display documentation
+  0x00 - Phase 1 of flight, (T-180: T+87). 
+  0x01 - Phase 2 of flight, (T+87: T+400 *TBD IDK*). 
+  0x03 - SD card failed to initialize.
+  0x04 - Mid range IMU failed to initialize.
+  0x05 - High range accel failed to initialize.
 */
 
 /*Includes*/
@@ -88,17 +96,18 @@ byte Chars[17][7] {
 #define ADC_A A1  //probe A
 #define ADC_B A2  //probe B
 
+/*Digital Board Temp. Pin -- CHECK W/ ELECTRICAL*/
+#define PIN_TMP A4
+
 /*Define number of ADCs using for a sweep -- CHECK W/ ELECTRICAL*/
 #define N_SWP_ADC   4 //num. of ADCs used for a sweep (3 sweep measurements + 1 for DAC)
 
 #define N_SWP_STEP  2 //num. of steps per sweep
 
-const uint16_t SwpLen = N_SWP_STEP * SWP_ADC_LEN + SWP_REF_LEN; //length of sweep
+const uint16_t swpLen = N_SWP_STEP * SWP_ADC_LEN + SWP_REF_LEN; //length of sweep
 #define MAX_SWP_LEN  (N_SWP_STEP * SWP_ADC_LEN)
 //Define SwpDAC[] -- CHECK W/ ELECTRICAL
 const uint16_t swpDAC[N_SWP_STEP] = {};
-
-//analog board temp sensor??
 
 /*SD Card Pin Define -- CHECK W/ ELECTRICAL*/
 #define SD_CS 10
@@ -137,6 +146,13 @@ void makeHedr(byte *, uint16_t *);
   Returns: void
 */
 void makeSensPyld(byte *);
+/*makeSensPckt
+  Populates type & length fields of packet header
+  Calls makeSensPyld to get sensor readings & add to payload
+  Parameters: pointer to array of bytes (a packet), pointer to the count variable
+  Returns: void
+*/
+void makeSensPckt(byte *, uint16_t *);
 /*getADC
   Takes 18 ADC readings --> filters out highest and lowest values
   Goal is to reduce outliers & ensure stable data
@@ -202,16 +218,17 @@ int16_t mag[3];
 int16_t temp_1;
 
 void setup() {
-  //Initialize I2C communication
-  Serial1.begin(115200);
-  Serial.begin(9600); //starts serial communication
-  while (!Serial) {} //wait for serial monitor
-  Serial.println("Initializing...");
+  is_active = false;
+  Serial.begin(9600);
+  Serial.println("Starting initialization...");
+  while(!Serial) {} //wait for serial monitor
+
+  /*Initialize I2C communication*/
   Wire.begin();
   Wire.setClock(10000); //set I2C to fast-mode (400kHz)
   //add test code here
 
-  //configure pins for 7-segment display
+  /*Configure pins for 7-segment display*/
   pinMode(seg[0], OUTPUT);
   pinMode(seg[1], OUTPUT);
   pinMode(seg[2], OUTPUT);
@@ -220,11 +237,96 @@ void setup() {
   pinMode(seg[5], OUTPUT);
   pinMode(seg[6], OUTPUT);
   pinMode(seg[7], OUTPUT);
+
+  /*Digital board temp sensor init.*/
+  pinMode(PIN_TMP, INPUT);
+  //TE pin init.
+  pinMode(PIN_RELAY_TE, INPUT);
+
+  /*Set analog resolutions to 12 bits*/
+  analogWriteResolution(12);
+  analogReadResolution(12);
+
+  /*ADC pins init.*/
+  pinMode(ADC_SWP, INPUT);
+  pinMode(ADC_A, INPUT);
+  pinMode(ADC_B, INPUT);
+
+  /*SD card init.*/
+  if (!sdInit()) {
+    Serial.println("SD card initialization failed.");
+    displayPrint(0x03);
+    while (!sdInit()) {
+      yield();
+    }
+  }
+  sdOpen();
+
+  /*Mid Range IMU init.*/
+  if (!MidIMU.begin()) {
+    Serial.println("Mid Range IMU initialization failed.");
+    displayPrint(0x04);
+    uint8_t i = 0;
+    while (!MidIMU.begin() && i < 5) {
+      delay(10);
+      i++;
+    }
+    if (i == 5) {
+      MidIMUFlag = false;
+    }
+  }
+  if (MidIMUFlag) {
+    MidIMU.setupAccel(MidIMU.LSM9DS1_ACCELRANGE_16G);
+    MidIMU.setupMag(MidIMU.LSM9DS1_MAGGAIN_4GAUSS);
+    MidIMU.setupGyro(MidIMU.LSM9DS1_GYROSCALE_2000DPS);
+  }
+
+  /*High-G Accelerometer Init.*/
+  if (!HighA.begin_I2C()) {
+    Serial.println("High Range Accel. initialization failed.");
+    displayPrint(0x05);
+    uint8_t i = 0;
+    while (!HighA.begin_I2C() && i < 5) {
+      delay(10);
+      i++;
+    }
+    if (i == 5) {
+      HighAFlag = false;
+    }
+  }
+  if (HighAFlag) {
+    HighA.setRange(H3LIS331_RANGE_100_G);
+    HighA.setDataRate(LIS331_DATARATE_1000_HZ);
+  }
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
+  /*If TE event --> start Phase 2*/
+  if ((PIN_RELAY_TE) == LOW) {
+    is_active = true;
+  }
+  /*Phase 1 -- Power on (only collecting sensor data)*/
+  if (is_active == false) {
+    if (MidIMUFlag & HighAFlag) {
+      displayPrint(0x00);
+    }
+    /*Take high frequency sensor readings & write packet to file*/
+    makeSensPckt(sensPckt, &count);
+    writePckt(datFile, sensPckt, HEDR_LEN + senLen);
+    delay(10);
+  }
+  /*Phase 2 -- TE event 1 (alternating collection of sweep and sensor data)*/
+  else if (is_active == false) {
+    displayPrint(0x01);
 
+    /*Make sensor and sweep packets*/
+    makeSensPckt(sensPckt, &count);
+    makeSweepPckt(swpPckt, &count);
+
+    /*Write packets to SD card*/
+    writePckt(datFile, sensPckt, HEDR_LEN + senLen);
+    writePckt(datFile, swpPckt, HEDR_LEN + swpLen);
+  }
 }
 
 /*Helper Functions*/
@@ -311,6 +413,15 @@ void makeSensPyld(byte *pckt) {
   memcpy(&pckt[HEDR_LEN + SENS_POS_MAG], &mag, 6);
   memcpy(&pckt[HEDR_LEN + SENS_POS_TMP_D], &temp_1, 2);
 
+  tFinal = millis();
+  memcpy(&pckt[HEDR_POS_T_FINAL], &tFinal, 4);
+  return;
+}
+void makeSensPckt(byte *pckt, uint16_t *count) {
+  makeHedr(pckt, count);
+  pckt[HEDR_POS_TYPE] = TYPE_SENS;
+  memcpy(&pckt[HEDR_POS_PYLD_LEN], &senLen, 2);
+  makeSensPyld(pckt);
   tFinal = millis();
   memcpy(&pckt[HEDR_POS_T_FINAL], &tFinal, 4);
   return;
