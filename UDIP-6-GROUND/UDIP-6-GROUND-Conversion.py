@@ -16,7 +16,7 @@ lenHedr = 15
 
 lenSens = 24
 lenMed = NUM_STEPS * 8 + 4
-fileName = "data.dat"
+fileName = "UDIP0087.DAT"
 
 timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 sensor_csv = f"sensor_packets_{timestamp}.csv"

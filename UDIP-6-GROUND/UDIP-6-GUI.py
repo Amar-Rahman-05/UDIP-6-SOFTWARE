@@ -1,3 +1,4 @@
+
 from PyQt5.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -19,9 +20,12 @@ from PyQt5.QtWidgets import (
     QTimeEdit,
     QVBoxLayout,QHBoxLayout, QGridLayout,QSizePolicy,
     QWidget,
+    QApplication
 )
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt
+
+import sys
 
 # Subclass QMainWindow to customize your application's main window
 class MainWindow(QMainWindow):
@@ -29,6 +33,8 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         widget = QWidget()
+        self.setCentralWidget(widget)
+        widget.setLayout(main_layout)
         #set background color
         self.setStyleSheet("background-color: lightgrey")
         self.setWindowTitle("UDIP-6 2026 Data")
@@ -55,3 +61,9 @@ class MainWindow(QMainWindow):
         #Layout for container
         header_container_layout = QHBoxLayout()
         header_container.setLayout(header_container_layout)
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    window = MainWindow()
+    window.show()
+    sys.exit(app.exec_())
