@@ -14,9 +14,9 @@ NUM_STEPS = 356
 
 lenHedr = 15
 
-lenSens = 24
+lenSens = 26
 lenMed = NUM_STEPS * 8 + 4
-fileName = "UDIP0087.DAT"
+fileName = "C:/Users/Indoo/UDIP-6-SOFTWARE/UDIP-6-GROUND/DATA/UDIP0087.DAT"
 
 timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 sensor_csv = f"sensor_packets_{timestamp}.csv"
@@ -68,7 +68,7 @@ class sensorPacket(Packet):
         self.gyro_M  = unpack('<hhh', self.pyld[12:18])   
         self.mag_M   = unpack('<hhh', self.pyld[18:24])    
         self.temp    = unpack('<h', self.pyld[24:26])[0]  
-        self.photo  = unpack('<h', self.pyld[26:28])[0]  
+        ##self.photo  = unpack('<h', self.pyld[26:28])[0]  
        
     
 class sweepPacket(Packet):
