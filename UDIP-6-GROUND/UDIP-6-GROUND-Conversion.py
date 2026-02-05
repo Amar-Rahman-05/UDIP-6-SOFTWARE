@@ -161,7 +161,7 @@ def write_packets_to_csv(packets):
             "accel_H",
             "gyro_M_x", "gyro_M_y", "gyro_M_z",
             "mag_M_x", "mag_M_y", "mag_M_z",
-            "temp", "photo"
+            "temp"
         ])
 
         sweep_writer.writerow([

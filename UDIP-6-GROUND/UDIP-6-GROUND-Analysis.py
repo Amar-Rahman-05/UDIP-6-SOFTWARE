@@ -32,11 +32,10 @@ sensor_csv = "sensor_packets_YYYY-MM-DD_HH-MM-SS.csv"
 
 time = []
 accel_M = {"x": [], "y": [], "z": []}
-accel_H = {"x": [], "y": [], "z": []}
+accel_H = []
 gyro    = {"x": [], "y": [], "z": []}
 mag     = {"x": [], "y": [], "z": []}
 temp    = []
-photo   = []
 
 with open(sensor_csv, newline="") as f:
     reader = csv.DictReader(f)
@@ -130,12 +129,3 @@ plt.legend()
 plt.grid()
 plt.show()
 
-# Photosensor vs Flight Duration
-
-plt.figure()
-plt.plot(time, photo)
-plt.xlabel("Flight Duration")
-plt.ylabel("Photosensor Output")
-plt.title("Photosensor vs Flight Duration")
-plt.grid()
-plt.show()
