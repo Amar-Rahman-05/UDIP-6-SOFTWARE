@@ -4,6 +4,7 @@
 from struct import unpack
 
 import csv
+import os
 
 from datetime import datetime
 
@@ -16,11 +17,15 @@ lenHedr = 15
 
 lenSens = 24
 lenMed = NUM_STEPS * 8 + 4
-fileName = "C:\\Users\\Indoo\\UDIP-6-SOFTWARE\\UDIP-6-GROUND\\DATA\\UDIP0087.DAT"
+fileName = "C:\\Users\\Indoo\\UDIP-6-SOFTWARE\\UDIP-6-GROUND\\SD-DATA\\UDIP0087.DAT"
 
 timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 sensor_csv = f"sensor_packets_{timestamp}.csv"
 sweep_csv  = f"sweep_packets_{timestamp}.csv"
+folder_name_sensor =  "C:\\Users\\Indoo\\UDIP-6-SOFTWARE\\UDIP-6-GROUND\\CSV-DATA\\SENSOR"
+folder_name_sweep =  "C:\\Users\\Indoo\\UDIP-6-SOFTWARE\\UDIP-6-GROUND\\CSV-DATA\\SWEEP"
+file_path_sensor = os.path.join(folder_name_sensor, sensor_csv)
+file_path_sweep = os.path.join(folder_name_sweep, sweep_csv)
 
 
 """REQUIRED PACKETS
@@ -145,13 +150,15 @@ def verifyHeader(sync, pcktType, pyldLen):
 
 def write_packets_to_csv(packets):
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     sensor_csv = f"sensor_packets_{timestamp}.csv"
     sweep_csv  = f"sweep_packets_{timestamp}.csv"
+    folder_name_sensor =  "C:\\Users\\Indoo\\UDIP-6-SOFTWARE\\UDIP-6-GROUND\\CSV-DATA\\SENSOR"
+    folder_name_sweep =  "C:\\Users\\Indoo\\UDIP-6-SOFTWARE\\UDIP-6-GROUND\\CSV-DATA\\SWEEP"
+    file_path_sensor = os.path.join(folder_name_sensor, sensor_csv)
+    file_path_sweep = os.path.join(folder_name_sweep, sweep_csv)
 
-    print("CREATING CSV FILES")
-
-    with open(sensor_csv, "w", newline="") as sf, open(sweep_csv, "w", newline="") as wf:
+    with open(file_path_sensor, "w", newline="") as sf, open(file_path_sweep, "w", newline="") as wf:
         print("OPENING CSV FILE")
         sensor_writer = csv.writer(sf)
         sweep_writer  = csv.writer(wf)
