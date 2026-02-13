@@ -29,6 +29,25 @@ import csv
 import os
 import matplotlib.pyplot as plt
 
+import matplotlib.pyplot as plt
+
+plt.rcParams.update({
+    "figure.figsize": (6.5, 4),
+    "figure.dpi": 300,
+    "font.size": 10,
+    "axes.labelsize": 11,
+    "axes.titlesize": 12,
+    "legend.fontsize": 9,
+    "xtick.labelsize": 9,
+    "ytick.labelsize": 9,
+    "axes.grid": True,
+    "grid.linestyle": "--",
+    "grid.linewidth": 0.5,
+    "lines.linewidth": 1.5,
+    "axes.spines.top": False,
+    "axes.spines.right": False,
+})
+
 sensor_csv = "sensor_packets_2026-02-06_09-39-18.csv" 
 sweep_csv = "sweep_packets_2026-02-04_21-36-27.csv"
 folder_name_sensor =  "C:\\Users\\Indoo\\UDIP-6-SOFTWARE\\UDIP-6-GROUND\\CSV-DATA\\SENSOR"
@@ -69,39 +88,43 @@ with open(file_path_sensor, newline="") as f:
 # Acceleration vs Flight Duration
 
 plt.figure()
-plt.plot(time, accel_M["x"], label="Accel X")
-plt.plot(time, accel_M["y"], label="Accel Y")
-plt.plot(time, accel_M["z"], label="Accel Z")
-plt.xlabel("Flight Duration")
-plt.ylabel("Acceleration (Medium Range)")
-plt.title("Acceleration vs Flight Duration")
-plt.legend()
-plt.grid()
+plt.plot(time, accel_M["x"], label="X-axis")
+plt.plot(time, accel_M["y"], label="Y-axis")
+plt.plot(time, accel_M["z"], label="Z-axis")
+plt.xlabel("Time (s)")
+plt.ylabel("Acceleration (m/s²)")
+plt.title("UDIP-6 Test Data: Medium-Range Acceleration")
+plt.legend(frameon=False)
+plt.tight_layout()
+plt.show()
 
 
 # High Range Acceleration
 
 plt.figure()
-plt.plot(time, accel_H, label="High Range Accel")
-plt.xlabel("Flight Duration")
-plt.ylabel("Acceleration (High Range)")
-plt.title("High Range Acceleration vs Flight Duration")
-plt.legend()
-plt.grid()
+plt.plot(time, accel_H, label="High-Range Accelerometer")
+
+plt.xlabel("Time (s)")
+plt.ylabel("Acceleration (m/s²)")
+plt.title("UDIP-6 Test Data: High-Range Acceleration")
+plt.legend(frameon=False)
+plt.tight_layout()
+plt.show()
 
 
 # Gyroscope vs Flight Duration
 
 plt.figure()
-plt.plot(time, gyro["x"], label="Gyro X")
-plt.plot(time, gyro["y"], label="Gyro Y")
-plt.plot(time, gyro["z"], label="Gyro Z")
-plt.xlabel("Flight Duration")
-plt.ylabel("Angular Rate")
-plt.title("Gyroscope vs Flight Duration")
-plt.legend()
-plt.grid()
+plt.plot(time, gyro["x"], label="X-axis")
+plt.plot(time, gyro["y"], label="Y-axis")
+plt.plot(time, gyro["z"], label="Z-axis")
 
+plt.xlabel("Time (s)")
+plt.ylabel("Angular Rate (rad/s)")
+plt.title("UDIP-6 Test Data: Gyroscope Measurements")
+plt.legend(frameon=False)
+plt.tight_layout()
+plt.show()
 
 # Temperature vs Flight Duration
 '''plt.figure()
@@ -115,54 +138,54 @@ plt.show()'''
 # Magnetometer vs Flight Duration
 
 plt.figure()
-plt.plot(time, mag["x"], label="Mag X")
-plt.plot(time, mag["y"], label="Mag Y")
-plt.plot(time, mag["z"], label="Mag Z")
-plt.xlabel("Flight Duration")
-plt.ylabel("Magnetic Flux Density")
-plt.title("Magnetometer vs Flight Duration")
-plt.legend()
-plt.grid()
+plt.plot(time, mag["x"], label="X-axis")
+plt.plot(time, mag["y"], label="Y-axis")
+plt.plot(time, mag["z"], label="Z-axis")
+plt.xlabel("Time (s)")
+plt.ylabel("Magnetic Flux Density (µT)")
+plt.title("UDIP-6 Test Data: Magnetometer Measurements")
+plt.legend(frameon=False)
+plt.tight_layout()
+plt.show()
 
 fig, ax1 = plt.subplots()
 
-# ---- Acceleration (primary left axis) ----
-ax1.plot(time, accel_M["x"], label="Accel M X")
-ax1.plot(time, accel_M["y"], label="Accel M Y")
-ax1.plot(time, accel_M["z"], label="Accel M Z")
-ax1.plot(time, accel_H, label="Accel High", linestyle="--")
-ax1.set_xlabel("Flight Duration")
-ax1.set_ylabel("Acceleration")
-ax1.grid()
+# Acceleration
+ax1.plot(time, accel_M["x"], label="Accel X")
+ax1.plot(time, accel_M["y"], label="Accel Y")
+ax1.plot(time, accel_M["z"], label="Accel Z")
+ax1.set_xlabel("Time (s)")
+ax1.set_ylabel("Acceleration (m/s²)")
 
-# ---- Gyroscope (second LEFT axis) ----
+# Gyroscope (offset left)
 ax2 = ax1.twinx()
 ax2.spines["right"].set_visible(False)
-ax2.spines["left"].set_position(("outward", 60))
+ax2.spines["left"].set_position(("outward", 50))
 ax2.yaxis.set_label_position("left")
 ax2.yaxis.tick_left()
-ax2.set_ylabel("Angular Rate")
+ax2.plot(time, gyro["x"], linestyle="--", label="Gyro X")
+ax2.plot(time, gyro["y"], linestyle="--", label="Gyro Y")
+ax2.plot(time, gyro["z"], linestyle="--", label="Gyro Z")
+ax2.set_ylabel("Angular Rate (rad/s)")
 
-ax2.plot(time, gyro["x"], label="Gyro X", linestyle=":")
-ax2.plot(time, gyro["y"], label="Gyro Y", linestyle=":")
-ax2.plot(time, gyro["z"], label="Gyro Z", linestyle=":")
-
-# ---- Magnetometer (third LEFT axis) ----
+# Magnetometer (further offset)
 ax3 = ax1.twinx()
 ax3.spines["right"].set_visible(False)
-ax3.spines["left"].set_position(("outward", 120))
+ax3.spines["left"].set_position(("outward", 100))
 ax3.yaxis.set_label_position("left")
 ax3.yaxis.tick_left()
-ax3.set_ylabel("Magnetic Flux Density")
+ax3.plot(time, mag["x"], linestyle=":", label="Mag X")
+ax3.plot(time, mag["y"], linestyle=":", label="Mag Y")
+ax3.plot(time, mag["z"], linestyle=":", label="Mag Z")
+ax3.set_ylabel("Magnetic Flux Density (µT)")
 
-ax3.plot(time, mag["x"], label="Mag X", linestyle="-.")
-ax3.plot(time, mag["y"], label="Mag Y", linestyle="-.")
-ax3.plot(time, mag["z"], label="Mag Z", linestyle="-.")
-
-# ---- Combined legend ----
 lines = ax1.get_lines() + ax2.get_lines() + ax3.get_lines()
-labels = [line.get_label() for line in lines]
-ax1.legend(lines, labels, loc="upper right")
+labels = [l.get_label() for l in lines]
+ax1.legend(lines, labels, frameon=False, loc="upper right")
 
-plt.title("Flight Sensor Data (All Sensors, Left Y-Axes)")
+plt.title("UDIP-6 Test Data: Combined Sensor Measurements")
+plt.tight_layout()
 plt.show()
+
+plt.savefig("UDIP6_Accel_Medium.png", dpi=300)
+plt.savefig("UDIP6_Accel_Medium.pdf")
