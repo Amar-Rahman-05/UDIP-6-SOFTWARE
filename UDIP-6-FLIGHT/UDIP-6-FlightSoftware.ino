@@ -10,6 +10,9 @@
   0x03 - SD card failed to initialize.
   0x04 - Mid range IMU failed to initialize.
   0x05 - High range accel failed to initialize.
+
+  Notes for future (2/2/26):
+  -get values from electrical for DAC sweep array
 */
 
 /*Includes*/
@@ -90,26 +93,28 @@ byte Chars[17][7] {
 
 #define SWP_ADC_LEN         8 //two byte unsigned int for how many ADC readings are taken in each sweep step
 
-/*Arduino Due Pins for Voltage Sweep -- CHECK W/ ELECTRICAL*/
+/*Arduino Due Pins for Voltage Sweep*/
 #define SWEEP_PIN DAC0  //voltage array is written to this pin
 #define ADC_SWP A0  //sweep voltage
 #define ADC_A A1  //probe A
-#define ADC_B A2  //probe B
+#define ADC_B A3  //probe B
+#define ADC_TEST1 A5 //checks +-12V
+#define ADC_TEST2 A6 //checks 12V again
 
 /*Digital Board Temp. Pin -- CHECK W/ ELECTRICAL*/
 #define PIN_TMP A4
 
-/*Define number of ADCs using for a sweep -- CHECK W/ ELECTRICAL*/
-#define N_SWP_ADC   4 //num. of ADCs used for a sweep (3 sweep measurements + 1 for DAC)
+/*Define number of ADCs using for a sweep*/
+#define N_SWP_ADC   6 //num. of ADCs used for a sweep (3 sweep measurements + 1 for DAC + 2 check ADCs)
 
 #define N_SWP_STEP  2 //num. of steps per sweep
 
 const uint16_t swpLen = N_SWP_STEP * SWP_ADC_LEN + SWP_REF_LEN; //length of sweep
 #define MAX_SWP_LEN  (N_SWP_STEP * SWP_ADC_LEN)
-//Define SwpDAC[] -- CHECK W/ ELECTRICAL
+/*Define SwpDAC[] -- CHECK W/ ELECTRICAL*/
 const uint16_t swpDAC[N_SWP_STEP] = {};
 
-/*SD Card Pin Define -- CHECK W/ ELECTRICAL*/
+//SD Card Pin Define
 #define SD_CS 10
 
 //Relay Pin Define
@@ -219,7 +224,7 @@ int16_t temp_1;
 
 void setup() {
   is_active = false;
-  Serial.begin(9600);
+  Serial.begin(115200);
   Serial.println("Starting initialization...");
   while(!Serial) {} //wait for serial monitor
 
@@ -251,11 +256,13 @@ void setup() {
   pinMode(ADC_SWP, INPUT);
   pinMode(ADC_A, INPUT);
   pinMode(ADC_B, INPUT);
+  pinMode(ADC_TEST1, INPUT);
+  pinMode(ADC_TEST2, INPUT);
 
   /*SD card init.*/
   if (!sdInit()) {
     Serial.println("SD card initialization failed.");
-    displayPrint(0x03);
+   displayPrint(0x03);
     while (!sdInit()) {
       yield();
     }
@@ -314,6 +321,29 @@ void loop() {
     makeSensPckt(sensPckt, &count);
     writePckt(datFile, sensPckt, HEDR_LEN + senLen);
     delay(10);
+
+    /*TEST CODE*/
+    MidIMU.read();
+    sensors_event_t ac, mg, gy, temp;
+    MidIMU.getEvent(&ac, &mg, &gy, &temp);
+    Serial.println("Acceleration values: \n");
+    Serial.println((int16_t(ac.acceleration.x * 95.43));
+    Serial.println((int16_t(ac.acceleration.y * 95.43));
+    Serial.println((int16_t(ac.acceleration.z * 95.43));
+    Serial.println("\n");
+    Serial.println("Gyroscope values: \n");
+    Serial.println(int16_t(gy.gyro.x * 936.25));
+    Serial.println(int16_t(gy.gyro.y * 936.25));
+    Serial.println(int16_t(gy.gyro.z * 936.25));
+    Serial.println("\n");
+    Serial.println("Magnetomoter values: \n");
+    Serial.println(int16_t(mg.magnetic.x * 409.6));
+    Serial.println(int16_t(mg.magnetic.y * 409.6));
+    Serial.println(int16_t(mg.magnetic.z * 409.6));
+    Serial.println("\n");
+    Serial.println("Temperature value: \n");
+    Serial.println(temp.temperature);
+    Serial.println("\n");
   }
   /*Phase 2 -- TE event 1 (alternating collection of sweep and sensor data)*/
   else if (is_active == false) {
@@ -379,7 +409,6 @@ void makeSensPyld(byte *pckt) {
     MidIMU.read();
     sensors_event_t ac, mg, gy, temp;
     MidIMU.getEvent(&ac, &mg, &gy, &temp);
-    //check if this calibration is accurate
     acc[0] = int16_t(ac.acceleration.x * 95.43);
     acc[1] = int16_t(ac.acceleration.y * 95.43);
     acc[2] = int16_t(ac.acceleration.z * 95.43);
@@ -405,8 +434,6 @@ void makeSensPyld(byte *pckt) {
   else {
     acc_h = 0xffff;
   }
-  //analog board temp?? are we measuring that or just the temp on sensor board
-
   memcpy(&pckt[HEDR_LEN + SENS_POS_ACCEL_M], &acc, 6);
   memcpy(&pckt[HEDR_LEN + SENS_POS_ACCEL_H], &acc_h, 2);
   memcpy(&pckt[HEDR_LEN + SENS_POS_GYRO], &gyr, 6);
