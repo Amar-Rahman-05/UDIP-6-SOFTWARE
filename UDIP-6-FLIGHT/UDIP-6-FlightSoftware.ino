@@ -112,6 +112,7 @@ byte Chars[17][7] {
 const uint16_t swpLen = N_SWP_STEP * SWP_ADC_LEN + SWP_REF_LEN; //length of sweep
 #define MAX_SWP_LEN  (N_SWP_STEP * SWP_ADC_LEN)
 /*Define SwpDAC[] -- CHECK W/ ELECTRICAL*/
+#define ZERO_VOLT_DAC 1737
 const uint16_t swpDAC[N_SWP_STEP] = {// 0 V → +8 V (89 points, step = +7)
   ZERO_VOLT_DAC,
   1744, 1751, 1758, 1765, 1772, 1779, 1786, 1793, 1800, 1807, 1814, 1821, 1828, 1835, 1842,
