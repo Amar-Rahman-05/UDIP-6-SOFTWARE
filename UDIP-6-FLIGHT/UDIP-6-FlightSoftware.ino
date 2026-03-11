@@ -101,18 +101,23 @@ byte Chars[17][7] {
 #define ADC_TEST1 A5 //checks +-12V
 #define ADC_TEST2 A6 //checks 12V again
 
-/*Digital Board Temp. Pin -- CHECK W/ ELECTRICAL*/
-#define PIN_TMP A4
+//stepped voltage zero value (in between the dac min and max)
+#define ZERO_VOLT_DAC 1737 
+//pre-step voltage min and max
+#define DAC_MIN 837 //1 VOLT
+#define DAC_MAX 2693 // 2 VOLTS
+
+/*Digital Board Temp. Pin --> analog read from pin */
+#define PIN_TMP 4
 
 /*Define number of ADCs using for a sweep*/
 #define N_SWP_ADC   6 //num. of ADCs used for a sweep (3 sweep measurements + 1 for DAC + 2 check ADCs)
 
-#define N_SWP_STEP  2 //num. of steps per sweep
+#define N_SWP_STEP  2000 //num. of steps per sweep
 
 const uint16_t swpLen = N_SWP_STEP * SWP_ADC_LEN + SWP_REF_LEN; //length of sweep
 #define MAX_SWP_LEN  (N_SWP_STEP * SWP_ADC_LEN)
 /*Define SwpDAC[] -- CHECK W/ ELECTRICAL*/
-#define ZERO_VOLT_DAC 1737
 const uint16_t swpDAC[N_SWP_STEP] = {// 0 V → +8 V (89 points, step = +7)
   ZERO_VOLT_DAC,
   1744, 1751, 1758, 1765, 1772, 1779, 1786, 1793, 1800, 1807, 1814, 1821, 1828, 1835, 1842,
@@ -241,6 +246,7 @@ uint16_t count = 0; //total collected packet count
 bool is_active = false; //boolean that determines if in phase 2 of flight -- changes at TE relay
 unsigned long tInitial;
 unsigned long tFinal;
+int test = 0;
 
 /*H3LIS331 -- High Range Accelerometer*/
 Adafruit_H3LIS331 HighA = Adafruit_H3LIS331();
@@ -253,18 +259,17 @@ bool MidIMUFlag = true;
 int16_t acc[3];
 int16_t gyr[3];
 int16_t mag[3];
-int16_t temp_1;
+float tmp;
 
 void setup() {
   is_active = false;
-  Serial.begin(115200);
+  Serial.begin(9600);
   Serial.println("Starting initialization...");
   while(!Serial) {} //wait for serial monitor
 
   /*Initialize I2C communication*/
   Wire.begin();
-  Wire.setClock(10000); //set I2C to fast-mode (400kHz)
-  //add test code here
+  Wire.setClock(100000); //set I2C to fast-mode (400kHz)
 
   /*Configure pins for 7-segment display*/
   pinMode(seg[0], OUTPUT);
@@ -293,33 +298,35 @@ void setup() {
   pinMode(ADC_TEST2, INPUT);
 
   /*SD card init.*/
-  if (!sdInit()) {
-    Serial.println("SD card initialization failed.");
-   displayPrint(0x03);
-    while (!sdInit()) {
-      yield();
-    }
-  }
-  sdOpen();
+  // if (!sdInit()) {
+  //   Serial.println("SD card initialization failed.");
+  //   displayPrint(0x03);
+  //   while (!sdInit()) {
+  //     yield();
+  //   }
+  // }
+  //sdOpen();
 
   /*Mid Range IMU init.*/
-  if (!MidIMU.begin()) {
-    Serial.println("Mid Range IMU initialization failed.");
-    displayPrint(0x04);
-    uint8_t i = 0;
-    while (!MidIMU.begin() && i < 5) {
-      delay(10);
-      i++;
-    }
-    if (i == 5) {
-      MidIMUFlag = false;
-    }
-  }
-  if (MidIMUFlag) {
-    MidIMU.setupAccel(MidIMU.LSM9DS1_ACCELRANGE_16G);
-    MidIMU.setupMag(MidIMU.LSM9DS1_MAGGAIN_4GAUSS);
-    MidIMU.setupGyro(MidIMU.LSM9DS1_GYROSCALE_2000DPS);
-  }
+  // Serial.println(MidIMU.begin());
+  // if (!MidIMU.begin()) {
+  //   Serial.println("Mid Range IMU initialization failed.");
+  //   displayPrint(0x04);
+  //   uint8_t i = 0;
+  //   while (!MidIMU.begin() && i < 20) {
+  //     delay(1000);
+  //     i++;
+  //   }
+  //   if (i == 20) {
+  //     MidIMUFlag = false;
+  //   }
+  // }
+  // if (MidIMUFlag) {
+  //   Serial.println("Mid Range IMU initialization success.");
+  //   MidIMU.setupAccel(MidIMU.LSM9DS1_ACCELRANGE_16G);
+  //   MidIMU.setupMag(MidIMU.LSM9DS1_MAGGAIN_4GAUSS);
+  //   MidIMU.setupGyro(MidIMU.LSM9DS1_GYROSCALE_2000DPS);
+  // }
 
   /*High-G Accelerometer Init.*/
   if (!HighA.begin_I2C()) {
@@ -335,6 +342,7 @@ void setup() {
     }
   }
   if (HighAFlag) {
+    Serial.println("High Range Accel. initialization success.");
     HighA.setRange(H3LIS331_RANGE_100_G);
     HighA.setDataRate(LIS331_DATARATE_1000_HZ);
   }
@@ -347,48 +355,79 @@ void loop() {
   }
   /*Phase 1 -- Power on (only collecting sensor data)*/
   if (is_active == false) {
-    if (MidIMUFlag & HighAFlag) {
+    if (MidIMUFlag && HighAFlag) {
       displayPrint(0x00);
     }
     /*Take high frequency sensor readings & write packet to file*/
-    makeSensPckt(sensPckt, &count);
-    writePckt(datFile, sensPckt, HEDR_LEN + senLen);
-    delay(10);
+    //makeSensPckt(sensPckt, &count);
+    //writePckt(datFile, sensPckt, HEDR_LEN + senLen);
 
     /*TEST CODE*/
-    MidIMU.read();
-    sensors_event_t ac, mg, gy, temp;
-    MidIMU.getEvent(&ac, &mg, &gy, &temp);
-    Serial.println("Acceleration values: \n");
-    Serial.println((int16_t(ac.acceleration.x * 95.43));
-    Serial.println((int16_t(ac.acceleration.y * 95.43));
-    Serial.println((int16_t(ac.acceleration.z * 95.43));
-    Serial.println("\n");
-    Serial.println("Gyroscope values: \n");
-    Serial.println(int16_t(gy.gyro.x * 936.25));
-    Serial.println(int16_t(gy.gyro.y * 936.25));
-    Serial.println(int16_t(gy.gyro.z * 936.25));
-    Serial.println("\n");
-    Serial.println("Magnetomoter values: \n");
-    Serial.println(int16_t(mg.magnetic.x * 409.6));
-    Serial.println(int16_t(mg.magnetic.y * 409.6));
-    Serial.println(int16_t(mg.magnetic.z * 409.6));
-    Serial.println("\n");
-    Serial.println("Temperature value: \n");
-    Serial.println(temp.temperature);
-    Serial.println("\n");
+    // MidIMU.read();
+    // sensors_event_t ac, mg, gy, temp;
+    // MidIMU.getEvent(&ac, &mg, &gy, &temp);
+    // tmp = analogRead(PIN_TMP);
+    // float voltage = (tmp * 3.3) / 4096.0;
+    // float tempC = (voltage - 0.5) * 100.0;
+    HighA.read();
+    //acceleration
+    // Serial.println("Acceleration values: \n");
+    // Serial.println(int16_t(ac.acceleration.x));
+    // Serial.println(int16_t(ac.acceleration.y));
+    // Serial.println(int16_t(ac.acceleration.z));
+    // Serial.println("\n");
+    // Serial.println("Gyroscope values: \n");
+    // Serial.println(int16_t(gy.gyro.x * 936.25));
+    // Serial.println(int16_t(gy.gyro.y * 936.25));
+    // Serial.println(int16_t(gy.gyro.z * 936.25));
+    // Serial.println("\n");
+    // Serial.println("Magnetomoter values: \n");
+    // Serial.println(int16_t(mg.magnetic.x * 409.6));
+    // Serial.println(int16_t(mg.magnetic.y * 409.6));
+    // Serial.println(int16_t(mg.magnetic.z * 409.6));
+    // Serial.println("\n");
+    // Serial.println("Temperature values: \n");
+    // Serial.println(tempC);
+    // Serial.println("~~~~~~~~~~~~~~~~~~~~~~~");
+    
+    
+    // Serial.println("High A values: \n");
+    // sensors_event_t high_a;
+    // HighA.getEvent(&high_a);
+    // Serial.println(high_a.acceleration.z);
+    // Serial.println("\n");
+    // delay(1000);
   }
   /*Phase 2 -- TE event 1 (alternating collection of sweep and sensor data)*/
   else if (is_active == false) {
     displayPrint(0x01);
+    // Serial.println("Starting DAC test");
+    // float shuntResistor = 100.0; // ohms
+    // if (test != 1) {
+    // for (int i = 0; i < N_SWP_STEP; i++) {
+    //       analogWrite(SWEEP_PIN, swpDAC[i]);
+    //       delay(50);
+    //       float adcSweep = getADC(ADC_SWP);
+    //       float currentA = getADC(ADC_A);
+
+    //       float voltage = adcSweep * (5.0 / 1023.0);
+    //       float current = (currentA * (5.0 / 1023.0)) / shuntResistor;
+    //       //currentB = getADC(ADC_B);
+    //       Serial.print(voltage);
+    //       Serial.println(",");
+    //       Serial.println(current);
+    //       delay(2000);
+    //       test++;
+    //   }
+    // }
 
     /*Make sensor and sweep packets*/
-    makeSensPckt(sensPckt, &count);
+    //makeSensPckt(sensPckt, &count);
     makeSweepPckt(swpPckt, &count);
 
     /*Write packets to SD card*/
-    writePckt(datFile, sensPckt, HEDR_LEN + senLen);
-    writePckt(datFile, swpPckt, HEDR_LEN + swpLen);
+    //writePckt(datFile, sensPckt, HEDR_LEN + senLen);
+    //writePckt(datFile, swpPckt, HEDR_LEN + swpLen);
   }
 }
 
@@ -451,7 +490,7 @@ void makeSensPyld(byte *pckt) {
     mag[0] = int16_t(mg.magnetic.x * 409.6);
     mag[1] = int16_t(mg.magnetic.y * 409.6);
     mag[2] = int16_t(mg.magnetic.z * 409.6);
-    uint16_t tmp = getADC(PIN_TMP);
+    tmp = analogRead(PIN_TMP);
   }
   else {
     acc[0] = 0xffff; acc[1] = 0xffff; acc[2] = 0xffff;
@@ -507,6 +546,8 @@ uint16_t getADC(int ADCpin) {
 void makeSweepPckt(byte *pckt, uint16_t *count) {
   makeHedr(pckt, count);
   pckt[HEDR_POS_TYPE] = TYPE_SWP;
+  memcpy(&pckt[HEDR_POS_PYLD_LEN], &swpLen, 2);
+  makeSweep(pckt);
   tFinal = millis();
   memcpy(&pckt[HEDR_POS_T_FINAL], &tFinal, 4);
   return;
