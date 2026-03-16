@@ -399,7 +399,7 @@ void loop() {
     // delay(1000);
   }
   /*Phase 2 -- TE event 1 (alternating collection of sweep and sensor data)*/
-  else if (is_active == false) {
+  else if (is_active == true) {
     displayPrint(0x01);
     // Serial.println("Starting DAC test");
     // float shuntResistor = 100.0; // ohms
