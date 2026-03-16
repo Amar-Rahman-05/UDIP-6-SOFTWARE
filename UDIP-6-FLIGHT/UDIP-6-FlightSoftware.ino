@@ -113,7 +113,7 @@ byte Chars[17][7] {
 /*Define number of ADCs using for a sweep*/
 #define N_SWP_ADC   6 //num. of ADCs used for a sweep (3 sweep measurements + 1 for DAC + 2 check ADCs)
 
-#define N_SWP_STEP  2000 //num. of steps per sweep
+#define N_SWP_STEP  356 //num. of steps per sweep
 
 const uint16_t swpLen = N_SWP_STEP * SWP_ADC_LEN + SWP_REF_LEN; //length of sweep
 #define MAX_SWP_LEN  (N_SWP_STEP * SWP_ADC_LEN)
