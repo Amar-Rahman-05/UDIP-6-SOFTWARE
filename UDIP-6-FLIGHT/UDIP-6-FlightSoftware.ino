@@ -296,6 +296,7 @@ void setup() {
   pinMode(ADC_B, INPUT);
   pinMode(ADC_TEST1, INPUT);
   pinMode(ADC_TEST2, INPUT);
+  pinMode(SWEEP_PIN, OUTPUT);
 
   /*SD card init.*/
   // if (!sdInit()) {
@@ -353,6 +354,7 @@ void loop() {
   if ((PIN_RELAY_TE) == LOW) {
     is_active = true;
   }
+  makeSweepPckt(swpPckt, &count);
   /*Phase 1 -- Power on (only collecting sensor data)*/
   if (is_active == false) {
     if (MidIMUFlag && HighAFlag) {
