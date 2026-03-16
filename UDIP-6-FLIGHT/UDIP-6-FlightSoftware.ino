@@ -228,7 +228,7 @@ void makeSweep(byte *pckt);
   int. representing length of the bytes to write
   Returns: void
 */
-void writePckt(File, byte *, uint16_t);
+void writePckt(File &, byte *, uint16_t);
 /*displayPrint
   Shows the inputted parameter on the 7-segment display
   Paramters: char representing a digit or symbol to display 
@@ -299,35 +299,34 @@ void setup() {
   pinMode(SWEEP_PIN, OUTPUT);
 
   /*SD card init.*/
-  // if (!sdInit()) {
-  //   Serial.println("SD card initialization failed.");
-  //   displayPrint(0x03);
-  //   while (!sdInit()) {
-  //     yield();
-  //   }
-  // }
-  //sdOpen();
+  if (!sdInit()) {
+    Serial.println("SD card initialization failed.");
+    displayPrint(0x03);
+    while (!sdInit()) {
+      yield();
+    }
+  }
+  sdOpen();
 
   /*Mid Range IMU init.*/
-  // Serial.println(MidIMU.begin());
-  // if (!MidIMU.begin()) {
-  //   Serial.println("Mid Range IMU initialization failed.");
-  //   displayPrint(0x04);
-  //   uint8_t i = 0;
-  //   while (!MidIMU.begin() && i < 20) {
-  //     delay(1000);
-  //     i++;
-  //   }
-  //   if (i == 20) {
-  //     MidIMUFlag = false;
-  //   }
-  // }
-  // if (MidIMUFlag) {
-  //   Serial.println("Mid Range IMU initialization success.");
-  //   MidIMU.setupAccel(MidIMU.LSM9DS1_ACCELRANGE_16G);
-  //   MidIMU.setupMag(MidIMU.LSM9DS1_MAGGAIN_4GAUSS);
-  //   MidIMU.setupGyro(MidIMU.LSM9DS1_GYROSCALE_2000DPS);
-  // }
+  if (!MidIMU.begin()) {
+    Serial.println("Mid Range IMU initialization failed.");
+    displayPrint(0x04);
+    uint8_t i = 0;
+    while (!MidIMU.begin() && i < 5) {
+      delay(100);
+      i++;
+    }
+    if (i == 5) {
+      MidIMUFlag = false;
+    }
+  }
+  if (MidIMUFlag) {
+    Serial.println("Mid Range IMU initialization success.");
+    MidIMU.setupAccel(MidIMU.LSM9DS1_ACCELRANGE_16G);
+    MidIMU.setupMag(MidIMU.LSM9DS1_MAGGAIN_4GAUSS);
+    MidIMU.setupGyro(MidIMU.LSM9DS1_GYROSCALE_2000DPS);
+  }
 
   /*High-G Accelerometer Init.*/
   if (!HighA.begin_I2C()) {
@@ -351,86 +350,54 @@ void setup() {
 
 void loop() {
   /*If TE event --> start Phase 2*/
-  if ((PIN_RELAY_TE) == LOW) {
+  if (digitalRead(PIN_RELAY_TE) == LOW) {
     is_active = true;
   }
-  makeSweepPckt(swpPckt, &count);
   /*Phase 1 -- Power on (only collecting sensor data)*/
   if (is_active == false) {
     if (MidIMUFlag && HighAFlag) {
       displayPrint(0x00);
     }
     /*Take high frequency sensor readings & write packet to file*/
-    //makeSensPckt(sensPckt, &count);
-    //writePckt(datFile, sensPckt, HEDR_LEN + senLen);
-
-    /*TEST CODE*/
-    // MidIMU.read();
-    // sensors_event_t ac, mg, gy, temp;
-    // MidIMU.getEvent(&ac, &mg, &gy, &temp);
-    // tmp = analogRead(PIN_TMP);
-    // float voltage = (tmp * 3.3) / 4096.0;
-    // float tempC = (voltage - 0.5) * 100.0;
-    HighA.read();
-    //acceleration
-    // Serial.println("Acceleration values: \n");
-    // Serial.println(int16_t(ac.acceleration.x));
-    // Serial.println(int16_t(ac.acceleration.y));
-    // Serial.println(int16_t(ac.acceleration.z));
-    // Serial.println("\n");
-    // Serial.println("Gyroscope values: \n");
-    // Serial.println(int16_t(gy.gyro.x * 936.25));
-    // Serial.println(int16_t(gy.gyro.y * 936.25));
-    // Serial.println(int16_t(gy.gyro.z * 936.25));
-    // Serial.println("\n");
-    // Serial.println("Magnetomoter values: \n");
-    // Serial.println(int16_t(mg.magnetic.x * 409.6));
-    // Serial.println(int16_t(mg.magnetic.y * 409.6));
-    // Serial.println(int16_t(mg.magnetic.z * 409.6));
-    // Serial.println("\n");
-    // Serial.println("Temperature values: \n");
-    // Serial.println(tempC);
-    // Serial.println("~~~~~~~~~~~~~~~~~~~~~~~");
-    
-    
-    // Serial.println("High A values: \n");
-    // sensors_event_t high_a;
-    // HighA.getEvent(&high_a);
-    // Serial.println(high_a.acceleration.z);
-    // Serial.println("\n");
-    // delay(1000);
+    Serial.println("Phase 1 Writing...");
+    makeSensPckt(sensPckt, &count);
+    writePckt(datFile, sensPckt, HEDR_LEN + senLen);
   }
+  /*TEST CODE*/
   /*Phase 2 -- TE event 1 (alternating collection of sweep and sensor data)*/
-  else if (is_active == true) {
+  //else if (is_active == true) {
     displayPrint(0x01);
-    // Serial.println("Starting DAC test");
-    // float shuntResistor = 100.0; // ohms
-    // if (test != 1) {
-    // for (int i = 0; i < N_SWP_STEP; i++) {
-    //       analogWrite(SWEEP_PIN, swpDAC[i]);
-    //       delay(50);
-    //       float adcSweep = getADC(ADC_SWP);
-    //       float currentA = getADC(ADC_A);
-
-    //       float voltage = adcSweep * (5.0 / 1023.0);
-    //       float current = (currentA * (5.0 / 1023.0)) / shuntResistor;
-    //       //currentB = getADC(ADC_B);
-    //       Serial.print(voltage);
-    //       Serial.println(",");
-    //       Serial.println(current);
-    //       delay(2000);
-    //       test++;
-    //   }
-    // }
+    //Serial.println("Starting DAC test");
 
     /*Make sensor and sweep packets*/
-    //makeSensPckt(sensPckt, &count);
+    makeSensPckt(sensPckt, &count);
     makeSweepPckt(swpPckt, &count);
 
     /*Write packets to SD card*/
-    //writePckt(datFile, sensPckt, HEDR_LEN + senLen);
-    //writePckt(datFile, swpPckt, HEDR_LEN + swpLen);
-  }
+    Serial.println("Phase 2 Writing...");
+    writePckt(datFile, sensPckt, HEDR_LEN + senLen);
+    writePckt(datFile, swpPckt, HEDR_LEN + swpLen);
+  //}
+  // float shuntResistor = 100.0; // ohms
+  //   for (int i = 0; i < N_SWP_STEP; i++) {
+  //         analogWrite(SWEEP_PIN, swpDAC[i]);
+  //         delay(50);
+  //         float adcSweep = getADC(ADC_SWP);
+  //         float currentA = getADC(ADC_A);
+  //         float voltage = adcSweep * (5.0 / 4095.0);
+  //         float calCurrentA = (currentA * (5.0 / 4095.0)) / shuntResistor;
+  //         float currentB = getADC(ADC_B);
+  //         float calCurrentB = (currentB * (5.0 / 1023.0) / shuntResistor);
+  //         Serial.println("Voltage: ");
+  //         Serial.println(voltage);
+  //         //Serial.print(voltage);
+  //         //Serial.println(",");
+  //         Serial.println("Current: ");
+  //         Serial.println(calCurrentA);
+  //         Serial.println(calCurrentA);
+  //         delay(2000);
+  //     }
+  datFile.flush();
 }
 
 /*Helper Functions*/
@@ -439,13 +406,14 @@ bool sdInit() {
   if (!SD.begin(SD_CS)) {
     return false;
   }
-  if (SD.exists("FILE_CNT.DATA")) {
-    cntFile = SD.open("FILE_CNT.DAT", O_READ);
-    cntFile.read(&fileCount, 1);
+  if (SD.exists("FILE_CNT.DAT")) {
+    cntFile = SD.open("FILE_CNT.DAT", FILE_READ);
+    fileCount = cntFile.parseInt();
+    cntFile.close();
   }
   else {
     fileCount = 0;
-    cntFile = SD.open("FILE_CNT.DAT", O_CREAT | O_TRUNC | O_WRITE);
+    cntFile = SD.open("FILE_CNT.DAT", FILE_WRITE);
     cntFile.write(fileCount);
     cntFile.flush();
     cntFile.close();
@@ -459,12 +427,19 @@ void sdOpen() {
   sprintf(fileName, "UDIP%04d.DAT", fileCount);
   fileCount++;
 
-  cntFile = SD.open("FILE_CNT.DAT", O_CREAT | O_TRUNC | O_WRITE);
-  cntFile.write(fileCount);
-  cntFile.flush();
+  cntFile = SD.open("FILE_CNT.DAT", FILE_WRITE);
+  cntFile.println(fileCount);
+  //cntFile.flush();
   cntFile.close();
 
-  datFile = SD.open(fileName, O_CREAT | O_TRUNC | O_WRITE );
+  datFile = SD.open(fileName, FILE_WRITE);
+  if (!datFile) {
+    Serial.println("Data file failed to open!");
+  } else {
+    Serial.println("Data file opened successfully.");
+    datFile.println("TEST");
+    datFile.flush();
+  }
   return;
 }
 void makeHedr(byte *pckt, uint16_t *pcktCount) {
@@ -577,8 +552,9 @@ void makeSweep(byte *pckt){
   return;
 }
 
-void writePckt(File f, byte *pckt, uint16_t pcktLen) {
+void writePckt(File &f, byte *pckt, uint16_t pcktLen) {
   f.write(pckt, pcktLen);
+  Serial.println(pcktLen);
   return;
 }
 void displayPrint(char n) {
