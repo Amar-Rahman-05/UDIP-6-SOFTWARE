@@ -268,8 +268,13 @@ void setup() {
   while(!Serial) {} //wait for serial monitor
 
   /*Initialize I2C communication*/
+  //I2C1 - MidIMU I2C line
   Wire.begin();
   Wire.setClock(100000); //set I2C to fast-mode (400kHz)
+  //I2C2 - MidIMU I2C line
+  Wire1.begin();
+  Wire1.setClock(100000);
+  delay(200);
 
   /*Configure pins for 7-segment display*/
   pinMode(seg[0], OUTPUT);
@@ -299,25 +304,30 @@ void setup() {
   pinMode(SWEEP_PIN, OUTPUT);
 
   /*SD card init.*/
-  if (!sdInit()) {
-    Serial.println("SD card initialization failed.");
-    displayPrint(0x03);
-    while (!sdInit()) {
-      yield();
-    }
-  }
-  sdOpen();
+  // if (!sdInit()) {
+  //   Serial.println("SD card initialization failed.");
+  //   displayPrint(0x03);
+  //   while (!sdInit()) {
+  //     yield();
+  //   }
+  // }
+  // sdOpen();
 
   /*Mid Range IMU init.*/
-  if (!MidIMU.begin()) {
+  bool midIMU_status = MidIMU.begin();
+  delay(150);
+  if (!midIMU_status) {
     Serial.println("Mid Range IMU initialization failed.");
     displayPrint(0x04);
     uint8_t i = 0;
-    while (!MidIMU.begin() && i < 5) {
-      delay(100);
+    while (!midIMU_status && i < 5) {
+      delay(200);
+      if (MidIMU.begin()) {
+        midIMU_status = true;
+      }
       i++;
     }
-    if (i == 5) {
+    if (!midIMU_status) {
       MidIMUFlag = false;
     }
   }
@@ -327,17 +337,21 @@ void setup() {
     MidIMU.setupMag(MidIMU.LSM9DS1_MAGGAIN_4GAUSS);
     MidIMU.setupGyro(MidIMU.LSM9DS1_GYROSCALE_2000DPS);
   }
-
   /*High-G Accelerometer Init.*/
-  if (!HighA.begin_I2C()) {
+  bool highA_status = HighA.begin_I2C(0x18, &Wire1);
+  delay(150);
+  if (!highA_status) {
     Serial.println("High Range Accel. initialization failed.");
     displayPrint(0x05);
     uint8_t i = 0;
-    while (!HighA.begin_I2C() && i < 5) {
-      delay(10);
+    while (!highA_status && i < 5) {
+      delay(200);
+      if (HighA.begin_I2C()) {
+        highA_status = true;
+    }
       i++;
     }
-    if (i == 5) {
+    if (!highA_status) {
       HighAFlag = false;
     }
   }
@@ -359,7 +373,6 @@ void loop() {
       displayPrint(0x00);
     }
     /*Take high frequency sensor readings & write packet to file*/
-    Serial.println("Phase 1 Writing...");
     makeSensPckt(sensPckt, &count);
     writePckt(datFile, sensPckt, HEDR_LEN + senLen);
   }
@@ -368,13 +381,45 @@ void loop() {
   //else if (is_active == true) {
     displayPrint(0x01);
     //Serial.println("Starting DAC test");
+    // MidIMU.read();
+    // sensors_event_t ac, mg, gy, temp;
+    // MidIMU.getEvent(&ac, &mg, &gy, &temp);
+    // acc[0] = int16_t(ac.acceleration.x * 95.43);
+    // acc[1] = int16_t(ac.acceleration.y * 95.43);
+    // acc[2] = int16_t(ac.acceleration.z * 95.43);
+    // gyr[0] = int16_t(gy.gyro.x * 936.25);
+    // gyr[1] = int16_t(gy.gyro.y * 936.25);
+    // gyr[2] = int16_t(gy.gyro.z * 936.25);
+    // mag[0] = int16_t(mg.magnetic.x * 409.6);
+    // mag[1] = int16_t(mg.magnetic.y * 409.6);
+    // mag[2] = int16_t(mg.magnetic.z * 409.6);
+    // tmp = analogRead(PIN_TMP);
+    // Serial.println("Acceleration: ");
+    // Serial.println(acc[0]);
+    // Serial.println(acc[1]);
+    // Serial.println(acc[2]);
+    // Serial.println("Gyroscope: ");
+    // Serial.println(gyr[0]);
+    // Serial.println(gyr[1]);
+    // Serial.println(gyr[2]);
+    // Serial.println("Magnetometer: ");
+    // Serial.println(mag[0]);
+    // Serial.println(mag[1]);
+    // Serial.println(mag[2]);
+    // delay(100);
 
-    /*Make sensor and sweep packets*/
+    // HighA.read();
+    // sensors_event_t high_a;
+    // HighA.getEvent(&high_a);
+    // acc_h = int16_t(high_a.acceleration.z * 33.4);
+    // Serial.println("High A: ");
+    // Serial.println(acc_h);
+
+    // /*Make sensor and sweep packets*/
     makeSensPckt(sensPckt, &count);
     makeSweepPckt(swpPckt, &count);
 
-    /*Write packets to SD card*/
-    Serial.println("Phase 2 Writing...");
+    // /*Write packets to SD card*/
     writePckt(datFile, sensPckt, HEDR_LEN + senLen);
     writePckt(datFile, swpPckt, HEDR_LEN + swpLen);
   //}
@@ -554,7 +599,6 @@ void makeSweep(byte *pckt){
 
 void writePckt(File &f, byte *pckt, uint16_t pcktLen) {
   f.write(pckt, pcktLen);
-  Serial.println(pcktLen);
   return;
 }
 void displayPrint(char n) {
