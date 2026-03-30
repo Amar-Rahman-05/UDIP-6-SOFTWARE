@@ -10,9 +10,6 @@
   0x03 - SD card failed to initialize.
   0x04 - Mid range IMU failed to initialize.
   0x05 - High range accel failed to initialize.
-
-  Notes for future (2/2/26):
-  -get values from electrical for DAC sweep array
 */
 
 /*Includes*/
@@ -269,12 +266,9 @@ void setup() {
 
   /*Initialize I2C communication*/
   //I2C1 - MidIMU I2C line
-  Wire.begin();
-  Wire.setClock(100000); //set I2C to fast-mode (400kHz)
-  //I2C2 - MidIMU I2C line
   Wire1.begin();
   Wire1.setClock(100000);
-  delay(200);
+  //Wire.setClock(100000); //set I2C to fast-mode (400kHz)
 
   /*Configure pins for 7-segment display*/
   pinMode(seg[0], OUTPUT);
@@ -312,17 +306,17 @@ void setup() {
   //   }
   // }
   // sdOpen();
-
+  delay(500);
   /*Mid Range IMU init.*/
-  bool midIMU_status = MidIMU.begin();
+  bool midIMU_status = MidIMU.begin(&Wire1);
   delay(150);
   if (!midIMU_status) {
-    Serial.println("Mid Range IMU initialization failed.");
+    Serial.println("Mid Range IMU initialization failed. Retrying...");
     displayPrint(0x04);
     uint8_t i = 0;
     while (!midIMU_status && i < 5) {
-      delay(200);
-      if (MidIMU.begin()) {
+      delay(500);
+      if (MidIMU.begin(&Wire1)) {
         midIMU_status = true;
       }
       i++;
@@ -341,11 +335,11 @@ void setup() {
   bool highA_status = HighA.begin_I2C(0x18, &Wire1);
   delay(150);
   if (!highA_status) {
-    Serial.println("High Range Accel. initialization failed.");
+    Serial.println("High Range Accel. initialization failed. Retrying...");
     displayPrint(0x05);
     uint8_t i = 0;
     while (!highA_status && i < 5) {
-      delay(200);
+      delay(500);
       if (HighA.begin_I2C()) {
         highA_status = true;
     }
@@ -376,11 +370,11 @@ void loop() {
     makeSensPckt(sensPckt, &count);
     writePckt(datFile, sensPckt, HEDR_LEN + senLen);
   }
-  /*TEST CODE*/
   /*Phase 2 -- TE event 1 (alternating collection of sweep and sensor data)*/
   //else if (is_active == true) {
     displayPrint(0x01);
-    //Serial.println("Starting DAC test");
+    /*TEST CODE*/
+    // Serial.println("Starting sensor test...")
     // MidIMU.read();
     // sensors_event_t ac, mg, gy, temp;
     // MidIMU.getEvent(&ac, &mg, &gy, &temp);
@@ -423,6 +417,7 @@ void loop() {
     writePckt(datFile, sensPckt, HEDR_LEN + senLen);
     writePckt(datFile, swpPckt, HEDR_LEN + swpLen);
   //}
+  //Serial.println("Starting DAC test...");
   // float shuntResistor = 100.0; // ohms
   //   for (int i = 0; i < N_SWP_STEP; i++) {
   //         analogWrite(SWEEP_PIN, swpDAC[i]);
@@ -442,6 +437,7 @@ void loop() {
   //         Serial.println(calCurrentA);
   //         delay(2000);
   //     }
+  delay(1000);
   datFile.flush();
 }
 
