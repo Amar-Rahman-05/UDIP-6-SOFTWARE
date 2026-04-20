@@ -6,7 +6,7 @@
   --------------------------------------------------
   Display documentation
   0x00 - Phase 1 of flight, (T-180: T+87). 
-  0x01 - Phase 2 of flight, (T+87: T+400 *TBD IDK*). 
+  0x01 - Phase 2 of flight, (T+87: T+400). 
   0x03 - SD card failed to initialize.
   0x04 - Mid range IMU failed to initialize.
   0x05 - High range accel failed to initialize.
@@ -298,14 +298,14 @@ void setup() {
   pinMode(SWEEP_PIN, OUTPUT);
 
   /*SD card init.*/
-  // if (!sdInit()) {
-  //   Serial.println("SD card initialization failed.");
-  //   displayPrint(0x03);
-  //   while (!sdInit()) {
-  //     yield();
-  //   }
-  // }
-  // sdOpen();
+  if (!sdInit()) {
+    Serial.println("SD card initialization failed.");
+    displayPrint(0x03);
+    while (!sdInit()) {
+      yield();
+    }
+  }
+  sdOpen();
   delay(500);
   /*Mid Range IMU init.*/
   bool midIMU_status = MidIMU.begin(&Wire1);
@@ -371,52 +371,17 @@ void loop() {
     writePckt(datFile, sensPckt, HEDR_LEN + senLen);
   }
   /*Phase 2 -- TE event 1 (alternating collection of sweep and sensor data)*/
-  //else if (is_active == true) {
+  else if (is_active == true) {
     displayPrint(0x01);
-    /*TEST CODE*/
-    // Serial.println("Starting sensor test...")
-    // MidIMU.read();
-    // sensors_event_t ac, mg, gy, temp;
-    // MidIMU.getEvent(&ac, &mg, &gy, &temp);
-    // acc[0] = int16_t(ac.acceleration.x * 95.43);
-    // acc[1] = int16_t(ac.acceleration.y * 95.43);
-    // acc[2] = int16_t(ac.acceleration.z * 95.43);
-    // gyr[0] = int16_t(gy.gyro.x * 936.25);
-    // gyr[1] = int16_t(gy.gyro.y * 936.25);
-    // gyr[2] = int16_t(gy.gyro.z * 936.25);
-    // mag[0] = int16_t(mg.magnetic.x * 409.6);
-    // mag[1] = int16_t(mg.magnetic.y * 409.6);
-    // mag[2] = int16_t(mg.magnetic.z * 409.6);
-    // tmp = analogRead(PIN_TMP);
-    // Serial.println("Acceleration: ");
-    // Serial.println(acc[0]);
-    // Serial.println(acc[1]);
-    // Serial.println(acc[2]);
-    // Serial.println("Gyroscope: ");
-    // Serial.println(gyr[0]);
-    // Serial.println(gyr[1]);
-    // Serial.println(gyr[2]);
-    // Serial.println("Magnetometer: ");
-    // Serial.println(mag[0]);
-    // Serial.println(mag[1]);
-    // Serial.println(mag[2]);
-    // delay(100);
 
-    // HighA.read();
-    // sensors_event_t high_a;
-    // HighA.getEvent(&high_a);
-    // acc_h = int16_t(high_a.acceleration.z * 33.4);
-    // Serial.println("High A: ");
-    // Serial.println(acc_h);
-
-    // /*Make sensor and sweep packets*/
+    /*Make sensor and sweep packets*/
     makeSensPckt(sensPckt, &count);
     makeSweepPckt(swpPckt, &count);
 
-    // /*Write packets to SD card*/
+    /*Write packets to SD card*/
     writePckt(datFile, sensPckt, HEDR_LEN + senLen);
     writePckt(datFile, swpPckt, HEDR_LEN + swpLen);
-  //}
+  }
   //Serial.println("Starting DAC test...");
   // float shuntResistor = 100.0; // ohms
   //   for (int i = 0; i < N_SWP_STEP; i++) {
@@ -437,7 +402,6 @@ void loop() {
   //         Serial.println(calCurrentA);
   //         delay(2000);
   //     }
-  delay(1000);
   datFile.flush();
 }
 
@@ -470,7 +434,7 @@ void sdOpen() {
 
   cntFile = SD.open("FILE_CNT.DAT", FILE_WRITE);
   cntFile.println(fileCount);
-  //cntFile.flush();
+  cntFile.flush();
   cntFile.close();
 
   datFile = SD.open(fileName, FILE_WRITE);
@@ -478,7 +442,6 @@ void sdOpen() {
     Serial.println("Data file failed to open!");
   } else {
     Serial.println("Data file opened successfully.");
-    datFile.println("TEST");
     datFile.flush();
   }
   return;
@@ -514,6 +477,7 @@ void makeSensPyld(byte *pckt) {
     acc[0] = 0xffff; acc[1] = 0xffff; acc[2] = 0xffff;
     gyr[0] = 0xffff; gyr[1] = 0xffff; gyr[2] = 0xffff;
     mag[0] = 0xffff; mag[1] = 0xffff; mag[2] = 0xffff;
+    tmp = analogRead(PIN_TMP);
   }
   if (HighAFlag) {
     HighA.read();
