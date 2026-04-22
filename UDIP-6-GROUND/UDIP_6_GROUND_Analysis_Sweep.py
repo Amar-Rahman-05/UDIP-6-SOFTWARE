@@ -80,8 +80,8 @@ def load_data(dat_number: str = "0001") -> list[dict]:
         I_B = (V_adc_B / SHUNT_OHM) * 1e9  # nA
 
         # differential mode (if used)
-        I = I_A - I_B
-        I = -I
+        CURRENT_GAIN = 1.0
+        I = -(I_A - I_B) * CURRENT_GAIN
 
         # IMPORTANT: DO NOT NORMALIZE
 
