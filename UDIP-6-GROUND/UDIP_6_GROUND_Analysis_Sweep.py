@@ -42,11 +42,13 @@ def load_data(dat_number: str = "0001") -> list[dict]:
             if cnt not in sweeps_raw:
                 sweeps_raw[cnt] = {
                     "count": cnt,
+                    "step": [],
                     "v_ref": [],
                     "adc_A": [],
                     "adc_B": [],
                 }
 
+            sweeps_raw[cnt]["step"].append(int(row["step"]))
             sweeps_raw[cnt]["v_ref"].append(int(row["v_ref"]))
             sweeps_raw[cnt]["adc_A"].append(int(row["adc_A"]))
             sweeps_raw[cnt]["adc_B"].append(int(row["adc_B"]))
@@ -60,17 +62,28 @@ def load_data(dat_number: str = "0001") -> list[dict]:
         adc_A = np.array(s["adc_A"], dtype=np.float64)
         adc_B = np.array(s["adc_B"], dtype=np.float64)
 
-        # Voltage from DAC (ONLY correct mapping)
-        V = (v_ref - ZERO_VOLT_DAC) * (V_MAX / (DAC_MAX - ZERO_VOLT_DAC))
+        v_ref = v_ref[:N_SWP_STEP]
+        adc_A = adc_A[:N_SWP_STEP]
+        adc_B = adc_B[:N_SWP_STEP]
 
-        # Current from ADC
+        # ─────────────────────────────────────────
+        # 1. REAL DAC VOLTAGE (LINEAR RESTORATION)
+        # ─────────────────────────────────────────
+        V = (v_ref - np.mean(v_ref)) * (V_MAX / (np.max(v_ref) - np.min(v_ref)))
+        # ─────────────────────────────────────────
+        # 2. REAL CURRENT FROM 100 MΩ SHUNT
+        # ─────────────────────────────────────────
         V_adc_A = (adc_A / ADC_RES) * ADC_VREF
         V_adc_B = (adc_B / ADC_RES) * ADC_VREF
 
-        I_A = (V_adc_A / SHUNT_OHM) * 1e9
-        I_B = (V_adc_B / SHUNT_OHM) * 1e9
+        I_A = (V_adc_A / SHUNT_OHM) * 1e9  # nA
+        I_B = (V_adc_B / SHUNT_OHM) * 1e9  # nA
 
+        # differential mode (if used)
         I = I_A - I_B
+        I = -I
+
+        # IMPORTANT: DO NOT NORMALIZE
 
         sweeps.append({
             "count": cnt,
@@ -98,7 +111,6 @@ def plot_iv_curve(canvas, sweeps: list[dict], sweep_idx: int = 0):
     ax = canvas.ax
     ax.clear()
 
-    # IMPORTANT: preserve time order
     ax.plot(V, I, linestyle=":", linewidth=1)
     ax.scatter(V, I, s=10)
 
