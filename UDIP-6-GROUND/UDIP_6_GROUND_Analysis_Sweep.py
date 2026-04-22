@@ -9,7 +9,7 @@ N_SWP_STEP = 356
 
 ZERO_VOLT_DAC = 1737
 DAC_MAX       = 2693
-V_MAX         = 16.0
+V_MAX         = 8.0
 
 ADC_RES  = 4095.0
 ADC_VREF = 5.0
@@ -80,7 +80,7 @@ def load_data(dat_number: str = "0001") -> list[dict]:
         I_B = (V_adc_B / SHUNT_OHM) * 1e9  # nA
 
         # differential mode (if used)
-        CURRENT_GAIN = 1.0
+        CURRENT_GAIN = 4.5
         I = -(I_A - I_B) * CURRENT_GAIN
 
         # IMPORTANT: DO NOT NORMALIZE
