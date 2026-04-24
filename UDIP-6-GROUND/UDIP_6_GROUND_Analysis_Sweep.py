@@ -9,7 +9,7 @@ N_SWP_STEP = 356
 
 ZERO_VOLT_DAC = 1737
 DAC_MAX       = 2693
-V_MAX         = 8.0
+V_MAX         = 16.0
 
 ADC_RES  = 4095.0
 ADC_VREF = 5.0
