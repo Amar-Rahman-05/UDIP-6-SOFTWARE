@@ -2,7 +2,7 @@
   University of Delaware Ionosphere Probe
   Department of Physics and Astronomy
   Team 2025-2026
-
+  Amanda Smarr & Amar Rahman
   --------------------------------------------------
   Display documentation
   0x01 - Phase 1 of flight, (T-180: T+87). 
@@ -81,7 +81,7 @@ byte Chars[17][7] {
 #define SWP_POS_B       2 //two byte unsigned int for probe B reading
 #define SWP_REF_LEN     4 //1 two byte unsigned int for reference payload length
 
-/*Sweep Packet ADC positions -- CHECK W/ ELECTRICAL*/
+/*Sweep Packet ADC positions*/
 #define SWP_POS_SWP_V       0 //two byte unsigned int for reading of the voltage from DAC
 //#define SWP_POS_ADC_VREF    2 //two byte unsigned int for reading of voltage ADC
 #define SWP_POS_ADC_A       2 //two byte unsigned int for reading of probe A ADC
@@ -113,7 +113,8 @@ byte Chars[17][7] {
 
 const uint16_t swpLen = SWP_REF_LEN + (N_SWP_STEP * SWP_ADC_LEN);
 #define MAX_SWP_LEN  (N_SWP_STEP * SWP_ADC_LEN)
-/*Define SwpDAC[] -- CHECK W/ ELECTRICAL*/
+
+/*Values sent to DAC to create sweep*/
 const uint16_t swpDAC[N_SWP_STEP] = {// 0 V → +8 V (89 points, step = +7)
   ZERO_VOLT_DAC,
   1744, 1751, 1758, 1765, 1772, 1779, 1786, 1793, 1800, 1807, 1814, 1821, 1828, 1835, 1842,
@@ -181,6 +182,7 @@ void makeHedr(byte *, uint16_t *);
 /*makeSensPyld
   Reads values from the sensor & 9DOF boards
   Assigns values to associated sensor variables
+  Increases packet count by 1 after each call
   Parameters: pointer to array of bytes (a packet)
   Returns: void
 */
@@ -239,8 +241,7 @@ byte fileCount;
 byte sensPckt[HEDR_LEN + senLen];
 static byte swpPckt[HEDR_LEN + SWP_REF_LEN + (N_SWP_STEP * SWP_ADC_LEN)];
 //byte swpPckt[HEDR_LEN + SWP_REF_LEN + MAX_SWP_LEN];
-uint16_t sensCount = 0;
-uint16_t swpCount  = 0;
+uint16_t count = 0; //total collected packet count
 bool is_active = false; //boolean that determines if in phase 2 of flight -- changes at TE relay
 unsigned long tInitial;
 unsigned long tFinal;
@@ -265,11 +266,10 @@ void setup() {
   Serial.println("Starting initialization...");
   while(!Serial) {} //wait for serial monitor
 
-  /*Initialize I2C communication*/
-  //I2C1 - MidIMU I2C line
+  /*I2C communication init.*/
+  /*Both sensors operate on Wire1 -- Adafruit 9DOF library (.ccp & .h files) were changed to accomodate Wire1 I2C bus*/
   Wire1.begin();
   Wire1.setClock(100000);
-  //Wire.setClock(100000); //set I2C to fast-mode (400kHz)
 
   /*Configure pins for 7-segment display*/
   pinMode(seg[0], OUTPUT);
@@ -283,7 +283,7 @@ void setup() {
 
   /*Digital board temp sensor init.*/
   pinMode(PIN_TMP, INPUT);
-  //TE pin init.
+  /*TE pin init.*/
   pinMode(PIN_RELAY_TE, INPUT_PULLUP);
 
   /*Set analog resolutions to 12 bits*/
@@ -294,8 +294,8 @@ void setup() {
   pinMode(ADC_SWP, INPUT);
   pinMode(ADC_A, INPUT);
   pinMode(ADC_B, INPUT);
-  pinMode(ADC_TEST1, INPUT);
-  pinMode(ADC_TEST2, INPUT);
+  //pinMode(ADC_TEST1, INPUT);
+  //pinMode(ADC_TEST2, INPUT);
   pinMode(SWEEP_PIN, OUTPUT);
 
   /*SD card init.*/
@@ -355,20 +355,21 @@ void setup() {
     HighA.setRange(H3LIS331_RANGE_100_G);
     HighA.setDataRate(LIS331_DATARATE_1000_HZ);
   }
-  Serial.print("Expected swpLen: ");
-  Serial.println(swpLen);
+  /*Sweep Packet Debug*/
+  // Serial.print("Expected swpLen: ");
+  // Serial.println(swpLen);
 
-  Serial.print("Computed swpLen: ");
-  Serial.println(SWP_REF_LEN + (N_SWP_STEP * SWP_ADC_LEN));
+  // Serial.print("Computed swpLen: ");
+  // Serial.println(SWP_REF_LEN + (N_SWP_STEP * SWP_ADC_LEN));
 
-  Serial.print("Buffer size: ");
-  Serial.println(sizeof(swpPckt));
+  // Serial.print("Buffer size: ");
+  // Serial.println(sizeof(swpPckt));
 
-  Serial.print("HEDR_LEN: ");
-  Serial.println(HEDR_LEN);
+  // Serial.print("HEDR_LEN: ");
+  // Serial.println(HEDR_LEN);
 
-  Serial.print("swpPckt pointer diff test: ");
-  Serial.println((uintptr_t)(swpPckt + HEDR_LEN) - (uintptr_t)swpPckt);
+  // Serial.print("swpPckt pointer diff test: ");
+  // Serial.println((uintptr_t)(swpPckt + HEDR_LEN) - (uintptr_t)swpPckt);
 }
 
 void loop() {
@@ -382,7 +383,7 @@ void loop() {
       displayPrint(0x01);
     }
     /*Take high frequency sensor readings & write packet to file*/
-    makeSensPckt(sensPckt, &sensCount);
+    makeSensPckt(sensPckt, &count);
     writePckt(datFile, sensPckt, HEDR_LEN + senLen);
   }
   /*Phase 2 -- TE event 1 (alternating collection of sweep and sensor data)*/
@@ -390,8 +391,8 @@ void loop() {
     displayPrint(0x02);
 
     /*Make sensor and sweep packets*/
-    makeSensPckt(sensPckt, &sensCount);
-    makeSweepPckt(swpPckt, &swpCount);
+    makeSensPckt(sensPckt, &count);
+    makeSweepPckt(swpPckt, &count);
 
     /*Write packets to SD card*/
     writePckt(datFile, sensPckt, HEDR_LEN + senLen);
@@ -400,6 +401,8 @@ void loop() {
     datFile.flush();
   }
   datFile.flush();
+  Serial.println("Packet count: ");
+  Serial.println(count);
 }
 
 /*Helper Functions*/
@@ -423,7 +426,8 @@ bool sdInit() {
 }
 void sdOpen() {
   File cntFile;
-
+  // SD.remove("FILE_CNT.DAT");  
+  // cntFile = SD.open("FILE_CNT.DAT", FILE_WRITE);
   char fileName[13];
 
   sprintf(fileName, "UDIP%04d.DAT", fileCount);
@@ -445,11 +449,11 @@ void makeHedr(byte *pckt, uint16_t *pcktCount) {
   tInitial = millis();
   pckt[HEDR_POS_SYNC] = PCKT_SYNC_0;
   pckt[HEDR_POS_SYNC + 1] = PCKT_SYNC_1;
-
-  uint16_t c = *pcktCount;
-  memcpy(&pckt[HEDR_POS_COUNT], &c, sizeof(c));
-
+  /*Every time a header is created, count is updated by 1*/
+  count++;
+  memcpy(&pckt[HEDR_POS_COUNT], &pcktCount, sizeof(pcktCount));
   memcpy(&pckt[HEDR_POS_T_INITIAL], &tInitial, 4);
+
   return;
 }
 void makeSensPyld(byte *pckt) {
@@ -491,9 +495,8 @@ void makeSensPyld(byte *pckt) {
 
   return;
 }
-void makeSensPckt(byte *pckt, uint16_t *sensCount) {
-  (*sensCount)++;
-  makeHedr(pckt, sensCount);
+void makeSensPckt(byte *pckt, uint16_t *count) {
+  makeHedr(pckt, count);
   pckt[HEDR_POS_TYPE] = TYPE_SENS;
   memcpy(&pckt[HEDR_POS_PYLD_LEN], &senLen, 2);
   makeSensPyld(pckt);
@@ -519,9 +522,8 @@ uint16_t getADC(int ADCpin) {
   val_sum -= (val_max + val_min);
   return (uint16_t(val_sum))/16;
 }
-void makeSweepPckt(byte *pckt, uint16_t *swpCount) {
-  (*swpCount)++;
-  makeHedr(pckt, swpCount);
+void makeSweepPckt(byte *pckt, uint16_t *count) {
+  makeHedr(pckt, count);
   pckt[HEDR_POS_TYPE] = TYPE_SWP;
   memcpy(&pckt[HEDR_POS_PYLD_LEN], &swpLen, 2);
   memset(&pckt[HEDR_LEN], 0, SWP_REF_LEN);
@@ -531,19 +533,20 @@ void makeSweepPckt(byte *pckt, uint16_t *swpCount) {
   return;
 }
 void doStep(byte *pckt, uint16_t dacLevel, int loc) {
-  if (loc < 0 || loc >= N_SWP_STEP) {
-    Serial.println("SWEEP OUT OF BOUNDS");
-    return;
-  }
+  // if (loc < 0 || loc >= N_SWP_STEP) {
+  //   Serial.println("SWEEP OUT OF BOUNDS");
+  //   return;
+  // }
   uint16_t adcSweep = 0;
   uint16_t adcA = 0;
   uint16_t adcB = 0;
   const int offset = HEDR_LEN + SWP_REF_LEN + (loc * SWP_ADC_LEN);
 
-  //send analog voltage out
+  /*Send analog voltage out*/
   analogWrite(SWEEP_PIN, dacLevel);
   delayMicroseconds(100);
-  //read ADC outputs
+  
+  /*Read ADC outputs*/
   adcSweep = getADC(ADC_SWP);
   adcA = getADC(ADC_A);
   adcB = getADC(ADC_B);
@@ -562,7 +565,6 @@ void makeSweep(byte *pckt){
   }
   return;
 }
-
 void writePckt(File &f, byte *pckt, uint16_t pcktLen) {
   f.write(pckt, pcktLen);
   return;
