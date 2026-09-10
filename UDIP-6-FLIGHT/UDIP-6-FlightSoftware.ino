@@ -82,10 +82,11 @@ byte Chars[17][7] {
 #define SWP_REF_LEN     4 //1 two byte unsigned int for reference payload length
 
 /*Sweep Packet ADC positions*/
-#define SWP_POS_SWP_V       0 //two byte unsigned int for reading of the voltage from DAC
+#define SWP_POS_SWP_VA       0 //two byte unsigned int for reading of the voltage from DAC
+#define SWP_POS_SWP_VB       2
 //#define SWP_POS_ADC_VREF    2 //two byte unsigned int for reading of voltage ADC
-#define SWP_POS_ADC_A       2 //two byte unsigned int for reading of probe A ADC
-#define SWP_POS_ADC_B       4 //two byte unsigned int for reading of probe B ADC
+#define SWP_POS_ADC_A        4 //two byte unsigned int for reading of probe A ADC
+#define SWP_POS_ADC_B        6 //two byte unsigned int for reading of probe B ADC
 
 #define SWP_ADC_LEN         6 //two byte unsigned int for how many ADC readings are taken in each sweep step
 
